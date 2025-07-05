@@ -1,29 +1,39 @@
 body {
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  margin: 0;
+  padding: 20px;
+  box-sizing: border-box;
 }
 
 .app-container {
-  max-width: 480px;
-  background: #fff;
-  border-radius: 18px;
-  box-shadow: 0 4px 32px 0 rgba(60, 72, 88, 0.12);
-  padding: 2.5rem 2rem 2rem 2rem;
+  max-width: 520px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  border-radius: 24px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+  padding: 2.5rem;
   display: flex;
   flex-direction: column;
   align-items: center;
   min-width: 400px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 h1 {
-  font-size: 2.2rem;
-  font-weight: 700;
+  font-size: 2.5rem;
+  font-weight: 800;
   margin-bottom: 2rem;
-  color: #2d3748;
-  letter-spacing: -1px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: -1.5px;
+  text-align: center;
 }
 
 .input-form {
@@ -35,100 +45,123 @@ h1 {
 }
 
 .input-form label {
-  font-weight: 500;
+  font-weight: 600;
   color: #374151;
   margin-bottom: 0.5rem;
   display: block;
   width: 100%;
   text-align: left;
+  font-size: 0.95rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .input-form input[type="text"],
 .input-form textarea {
   width: 100%;
   max-width: 400px;
-  padding: 0.7em 1em;
-  border: 1px solid #cbd5e1;
-  border-radius: 8px;
+  padding: 1rem 1.2rem;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
   font-size: 1rem;
-  background: #f8fafc;
-  transition: border-color 0.2s, box-shadow 0.2s;
-  margin-top: 0.3rem;
+  background: rgba(255, 255, 255, 0.8);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  margin-top: 0.5rem;
   box-sizing: border-box;
   display: block;
+  font-family: inherit;
 }
+
 .input-form input[type="text"]:focus,
 .input-form textarea:focus {
-  border-color: #6366f1;
+  border-color: #667eea;
   outline: none;
-  box-shadow: 0 0 0 2px #6366f133;
+  box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+  background: rgba(255, 255, 255, 0.95);
+  transform: translateY(-1px);
 }
 
 .input-form input[type="radio"] {
   margin-right: 0.5em;
-  accent-color: #6366f1;
+  accent-color: #667eea;
+  transform: scale(1.2);
 }
 
 .input-form button[type="submit"] {
-  background: linear-gradient(90deg, #6366f1 0%, #60a5fa 100%);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: #fff;
   border: none;
-  border-radius: 8px;
-  padding: 0.8em 1.5em;
+  border-radius: 12px;
+  padding: 1rem 2rem;
   font-size: 1.1rem;
   font-weight: 600;
   cursor: pointer;
-  box-shadow: 0 2px 8px 0 rgba(99, 102, 241, 0.08);
-  transition: background 0.2s, box-shadow 0.2s;
+  box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   width: 100%;
   max-width: 400px;
+  font-family: inherit;
+  text-transform: uppercase;
+  letter-spacing: 1px;
 }
+
 .input-form button[type="submit"]:hover {
-  background: linear-gradient(90deg, #4f46e5 0%, #2563eb 100%);
-  box-shadow: 0 4px 16px 0 rgba(99, 102, 241, 0.16);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 35px rgba(102, 126, 234, 0.4);
+}
+
+.input-form button[type="submit"]:active {
+  transform: translateY(0);
 }
 
 .search-bar {
-  margin-top: 24px;
+  margin-top: 2rem;
   width: 100%;
   max-width: 400px;
   display: flex;
   align-items: center;
   gap: 0.5rem;
 }
+
 .search-bar input[type="text"] {
   width: 100%;
-  padding: 0.5em 1em;
-  border-radius: 8px;
-  border: 1px solid #cbd5e1;
-  font-size: 16px;
-  background: #f8fafc;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  padding: 0.8rem 1.2rem;
+  border-radius: 12px;
+  border: 2px solid #e5e7eb;
+  font-size: 1rem;
+  background: rgba(255, 255, 255, 0.8);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  font-family: inherit;
 }
+
 .search-bar input[type="text"]:focus {
-  border-color: #6366f1;
+  border-color: #667eea;
   outline: none;
-  box-shadow: 0 0 0 2px #6366f133;
+  box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+  background: rgba(255, 255, 255, 0.95);
+  transform: translateY(-1px);
 }
 
 .error {
   color: #ef4444;
-  font-size: 0.98em;
-  margin-top: 0.3em;
+  font-size: 0.9rem;
+  margin-top: 0.5rem;
   margin-bottom: 0;
   text-align: left;
+  font-weight: 500;
 }
 
 .submitted-data, .parsed-tree {
-  background: #f1f5f9;
-  border-radius: 10px;
-  padding: 1.2em 1em;
+  background: rgba(241, 245, 249, 0.8);
+  border-radius: 16px;
+  padding: 1.5rem;
   margin-top: 2rem;
-  font-size: 1.02rem;
+  font-size: 1rem;
   color: #334155;
-  box-shadow: 0 2px 8px 0 rgba(60, 72, 88, 0.06);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
   text-align: left;
   word-break: break-all;
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .d3-tree-container {
@@ -136,10 +169,12 @@ h1 {
   justify-content: center;
   width: 100%;
   margin-top: 2rem;
-  background: #f8fafc;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px 0 rgba(60, 72, 88, 0.06);
-  padding: 1.5rem 0.5rem;
+  background: rgba(248, 250, 252, 0.8);
+  border-radius: 20px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+  padding: 2rem 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
 }
 
 .d3-tree-container svg {
@@ -148,75 +183,101 @@ h1 {
 }
 
 .sidebar {
-  min-width: 260px;
-  max-width: 320px;
-  background: #fff;
-  border-radius: 16px;
-  box-shadow: 0 4px 24px 0 rgba(60,72,88,0.10);
-  padding: 2rem 1.5rem;
+  min-width: 280px;
+  max-width: 340px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  border-radius: 20px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+  padding: 2rem;
   margin-top: 32px;
   height: fit-content;
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
+
 .sidebar h2 {
-  font-size: 1.25rem;
-  margin-bottom: 1rem;
-  color: #2d3748;
+  font-size: 1.4rem;
+  margin-bottom: 1.5rem;
+  color: #1f2937;
+  font-weight: 700;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
+
 .sidebar .node-detail-label {
-  color: #64748b;
-  font-weight: 500;
-  margin-right: 0.5em;
-}
-.sidebar .node-detail-value {
-  color: #22223b;
+  color: #6b7280;
   font-weight: 600;
+  margin-right: 0.5em;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
+
+.sidebar .node-detail-value {
+  color: #1f2937;
+  font-weight: 600;
+  font-size: 1rem;
+}
+
 .sidebar .empty {
-  color: #b0b7c3;
+  color: #9ca3af;
   font-style: italic;
+  text-align: center;
+  padding: 1rem;
+  background: rgba(243, 244, 246, 0.5);
+  border-radius: 12px;
+  border: 1px dashed #d1d5db;
 }
 
 @media (max-width: 900px) {
+  body {
+    padding: 10px;
+  }
+  
   .app-container {
     min-width: 90vw;
     max-width: 98vw;
-    padding: 1.2rem 0.5rem;
+    padding: 1.5rem;
   }
+  
   .sidebar {
     min-width: 90vw;
     max-width: 98vw;
     margin-top: 1.5rem;
-    padding: 1.2rem 0.5rem;
+    padding: 1.5rem;
   }
+  
   .d3-tree-container {
-    padding: 0.5rem 0.1rem;
+    padding: 1rem 0.5rem;
+  }
+  
+  h1 {
+    font-size: 2rem;
   }
 }
 
 @media (max-width: 600px) {
   .app-container {
-    max-width: 98vw;
-    padding: 1.2rem 0.5rem;
+    min-width: 95vw;
+    padding: 1rem;
   }
+  
   h1 {
-    font-size: 1.5rem;
+    font-size: 1.8rem;
   }
-  body {
-    align-items: flex-start;
-    padding-top: 1.5rem;
-  }
+  
   .input-form input[type="text"],
   .input-form textarea,
-  .input-form button[type="submit"] {
-    max-width: 98vw;
+  .search-bar input[type="text"] {
+    padding: 0.8rem 1rem;
   }
-  .sidebar {
-    min-width: 98vw;
-    max-width: 98vw;
-    margin-top: 1.5rem;
-    padding: 1.2rem 0.5rem;
+  
+  .input-form button[type="submit"] {
+    padding: 0.8rem 1.5rem;
   }
 }

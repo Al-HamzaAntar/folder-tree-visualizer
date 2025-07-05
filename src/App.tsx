@@ -19,18 +19,6 @@ interface FolderNode {
   // Optionally, add more fields as needed
 }
 
-// Utility: Parse JSON input into FolderNode
-function parseJsonInput(json: string): FolderNode | null {
-  try {
-    const data = JSON.parse(json);
-    // Assume user input is already a valid tree structure
-    // Optionally, normalize here if needed
-    return data;
-  } catch {
-    return null;
-  }
-}
-
 // Utility: Parse folder path string into FolderNode
 function parsePathInput(path: string): FolderNode {
   // Split by backslash or forward slash
@@ -47,12 +35,6 @@ function parsePathInput(path: string): FolderNode {
     current = child;
   }
   return node;
-}
-
-// Helper: Get path for a node
-function getNodePath(node: FolderNode, parentPath: string[] = []): string[] {
-  if (!node) return parentPath;
-  return [...parentPath, node.name];
 }
 
 // Helper: Recursively clone and collapse/expand nodes
@@ -190,8 +172,8 @@ function FolderTreeD3({ tree, collapsed, setCollapsed, selectedNodePath, setSele
       .on('zoom', (event) => {
         setZoomTransform(event.transform);
       });
-    svg.call(zoom as any);
-  }, [tree, collapsed, zoomTransform, selectedNodePath, search]);
+    svg.call(zoom as d3.ZoomBehavior<SVGSVGElement, unknown>);
+  }, [tree, collapsed, zoomTransform, selectedNodePath, search, setCollapsed]);
 
   // Tooltip rendering
   return (
@@ -224,11 +206,6 @@ function FolderTreeD3({ tree, collapsed, setCollapsed, selectedNodePath, setSele
 }
 
 function App() {
-  const [inputType, setInputType] = useState<'json' | 'path'>(() => {
-    return (localStorage.getItem('inputType') as 'json' | 'path') || 'json';
-  });
-  const [jsonInput, setJsonInput] = useState(() => localStorage.getItem('jsonInput') || '');
-  const [pathInput, setPathInput] = useState(() => localStorage.getItem('pathInput') || '');
   const [parsedTree, setParsedTree] = useState<FolderNode | null>(null);
   const [search, setSearch] = useState(() => localStorage.getItem('search') || '');
   const [selectedNodePath, setSelectedNodePath] = useState<string | null>(() => localStorage.getItem('selectedNodePath'));
@@ -240,29 +217,42 @@ function App() {
     }
   });
 
-  // Persist state in localStorage
-  useEffect(() => { localStorage.setItem('inputType', inputType); }, [inputType]);
-  useEffect(() => { localStorage.setItem('jsonInput', jsonInput); }, [jsonInput]);
-  useEffect(() => { localStorage.setItem('pathInput', pathInput); }, [pathInput]);
+  // React Hook Form setup
+  const { control, handleSubmit, watch } = useForm<FormData>({
+    defaultValues: {
+      inputType: (localStorage.getItem('inputType') as 'json' | 'path') || 'json',
+      jsonInput: localStorage.getItem('jsonInput') || '',
+      pathInput: localStorage.getItem('pathInput') || ''
+    }
+  });
+
+  const watchedInputType = watch('inputType');
+  const watchedJsonInput = watch('jsonInput');
+  const watchedPathInput = watch('pathInput');
+
+  // Persist form data in localStorage
+  useEffect(() => { localStorage.setItem('inputType', watchedInputType); }, [watchedInputType]);
+  useEffect(() => { localStorage.setItem('jsonInput', watchedJsonInput || ''); }, [watchedJsonInput]);
+  useEffect(() => { localStorage.setItem('pathInput', watchedPathInput || ''); }, [watchedPathInput]);
   useEffect(() => { localStorage.setItem('search', search); }, [search]);
   useEffect(() => { localStorage.setItem('selectedNodePath', selectedNodePath || ''); }, [selectedNodePath]);
   useEffect(() => { localStorage.setItem('collapsed', JSON.stringify(collapsed)); }, [collapsed]);
 
   // Parse input on submit
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const onSubmit = (data: FormData) => {
     let tree: FolderNode | null = null;
-    if (inputType === 'json' && jsonInput) {
-      try { tree = JSON.parse(jsonInput); } catch {}
-    } else if (inputType === 'path' && pathInput) {
-      tree = parsePathInput(pathInput);
+    if (data.inputType === 'json') {
+      try { tree = JSON.parse(data.jsonInput || ''); } catch {}
+    } else if (data.inputType === 'path') {
+      tree = parsePathInput(data.pathInput || '');
     }
     setParsedTree(tree);
     setSelectedNodePath(null);
   };
 
   // Search helpers
-  function findNodeByName(node: FolderNode, name: string, path: string[] = []): string | null {
+  function findNodeByName(node: FolderNode, name: string | undefined, path: string[] = []): string | null {
+    if (!name) return null;
     if (node.name.toLowerCase().includes(name.toLowerCase())) {
       return [...path, node.name].join('/');
     }
@@ -277,8 +267,8 @@ function App() {
 
   // Sidebar node info
   let selectedNode: FolderNode | null = null;
-  function findNodeByPath(node: FolderNode, path: string[]): FolderNode | null {
-    if (path.length === 0) return node;
+  function findNodeByPath(node: FolderNode, path: (string | undefined)[]): FolderNode | null {
+    if (!path.length || !path[0]) return node;
     if (node.name === path[0]) {
       if (path.length === 1) return node;
       if (node.children) {
@@ -312,44 +302,64 @@ function App() {
     <div style={{ display: 'flex', gap: 32, alignItems: 'flex-start', justifyContent: 'center' }}>
       <div className="app-container">
         <h1>Folder Tree Visualizer</h1>
-        <form onSubmit={handleSubmit} className="input-form">
+        <form onSubmit={handleSubmit(onSubmit)} className="input-form">
           <div>
             <label>
-              <input
-                type="radio"
-                value="json"
-                checked={inputType === 'json'}
-                onChange={() => setInputType('json')}
-              /> JSON Input
-              <input
-                type="radio"
-                value="path"
-                checked={inputType === 'path'}
-                onChange={() => setInputType('path')}
-                style={{ marginLeft: 16 }}
-              /> Folder Path Input
+              <Controller
+                name="inputType"
+                control={control}
+                render={({ field }) => (
+                  <>
+                    <input
+                      type="radio"
+                      value="json"
+                      checked={field.value === 'json'}
+                      onChange={() => field.onChange('json')}
+                    /> JSON Input
+                    <input
+                      type="radio"
+                      value="path"
+                      checked={field.value === 'path'}
+                      onChange={() => field.onChange('path')}
+                      style={{ marginLeft: 16 }}
+                    /> Folder Path Input
+                  </>
+                )}
+              />
             </label>
           </div>
-          {inputType === 'json' && (
+          {watchedInputType === 'json' && (
             <div>
               <label>JSON Input:</label>
-              <textarea
-                value={jsonInput}
-                onChange={e => setJsonInput(e.target.value)}
-                rows={6}
-                cols={40}
-                required
+              <Controller
+                name="jsonInput"
+                control={control}
+                rules={{ required: watchedInputType === 'json' }}
+                render={({ field }) => (
+                  <textarea
+                    {...field}
+                    rows={6}
+                    cols={40}
+                    required
+                  />
+                )}
               />
             </div>
           )}
-          {inputType === 'path' && (
-      <div>
+          {watchedInputType === 'path' && (
+            <div>
               <label>Folder Path Input:</label>
-              <input
-                type="text"
-                value={pathInput}
-                onChange={e => setPathInput(e.target.value)}
-                required
+              <Controller
+                name="pathInput"
+                control={control}
+                rules={{ required: watchedInputType === 'path' }}
+                render={({ field }) => (
+                  <input
+                    {...field}
+                    type="text"
+                    required
+                  />
+                )}
               />
             </div>
           )}

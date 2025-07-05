@@ -1,8 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import './App.css'
 import * as d3 from 'd3'
-import { useEffect, useRef } from 'react'
 import type { MouseEvent } from 'react'
 
 // Types for form data
@@ -27,7 +26,7 @@ function parsePathInput(path: string): FolderNode {
     return { name: '', children: [] };
   }
   // Build nested structure
-  let node: FolderNode = { name: segments[0], children: [] };
+  const node: FolderNode = { name: segments[0], children: [] };
   let current = node;
   for (let i = 1; i < segments.length; i++) {
     const child: FolderNode = { name: segments[i], children: [] };
@@ -64,11 +63,11 @@ function FolderTreeD3({ tree, collapsed, setCollapsed, selectedNodePath, setSele
   const [zoomTransform, setZoomTransform] = useState<d3.ZoomTransform | null>(null);
 
   // Collapse/expand handler
-  const handleNodeClick = (d: d3.HierarchyPointNode<FolderNode>) => {
+  const handleNodeClick = useCallback((d: d3.HierarchyPointNode<FolderNode>) => {
     const path = d.ancestors().reverse().map(n => n.data.name).join('/');
     setCollapsed(prev => ({ ...prev, [path]: !prev[path] }));
     setSelectedNodePath(path);
-  };
+  }, [setCollapsed, setSelectedNodePath]);
 
   // Tooltip handlers
   const handleNodeMouseOver = (event: MouseEvent, d: d3.HierarchyPointNode<FolderNode>) => {
@@ -173,7 +172,7 @@ function FolderTreeD3({ tree, collapsed, setCollapsed, selectedNodePath, setSele
         setZoomTransform(event.transform);
       });
     svg.call(zoom as d3.ZoomBehavior<SVGSVGElement, unknown>);
-  }, [tree, collapsed, zoomTransform, selectedNodePath, search, setCollapsed]);
+  }, [tree, collapsed, zoomTransform, selectedNodePath, search, setCollapsed, handleNodeClick]);
 
   // Tooltip rendering
   return (
@@ -242,7 +241,7 @@ function App() {
   const onSubmit = (data: FormData) => {
     let tree: FolderNode | null = null;
     if (data.inputType === 'json') {
-      try { tree = JSON.parse(data.jsonInput || ''); } catch {}
+      try { tree = JSON.parse(data.jsonInput || ''); } catch { tree = null; }
     } else if (data.inputType === 'path') {
       tree = parsePathInput(data.pathInput || '');
     }
@@ -251,7 +250,7 @@ function App() {
   };
 
   // Search helpers
-  function findNodeByName(node: FolderNode, name: string | undefined, path: string[] = []): string | null {
+  const findNodeByName = useCallback((node: FolderNode, name: string | undefined, path: string[] = []): string | null => {
     if (!name) return null;
     if (node.name.toLowerCase().includes(name.toLowerCase())) {
       return [...path, node.name].join('/');
@@ -263,7 +262,7 @@ function App() {
       }
     }
     return null;
-  }
+  }, []);
 
   // Sidebar node info
   let selectedNode: FolderNode | null = null;
@@ -290,7 +289,7 @@ function App() {
       const foundPath = findNodeByName(parsedTree, search);
       if (foundPath) setSelectedNodePath(foundPath);
     }
-  }, [search, parsedTree]);
+  }, [search, parsedTree, findNodeByName]);
 
   // In App component, update setCollapsed to use functional form
   const handleSetCollapsed = (updater: (prev: Record<string, boolean>) => Record<string, boolean>) => {

@@ -2,6 +2,8 @@
 
 A minimal React + TypeScript + Vite project to visualize folder structures.
 
+<img src="./src/assets/dtv.png" alt="thumbnail" />
+
 ## Getting Started
 
 ### 1. Download the Project
@@ -120,3 +122,4 @@ export default tseslint.config([
   },
 ]);
 ```
+

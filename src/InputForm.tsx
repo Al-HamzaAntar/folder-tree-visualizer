@@ -59,7 +59,7 @@ export const InputForm: React.FC<InputFormProps> = ({
             <input
               {...field}
               placeholder="Enter a folder path (e.g. root/folder1/folder2)"
-              style={{ width: '100%' }}
+              style={{ width: '100%', padding: '10px', boxSizing: 'border-box', borderRadius: '12px', border: '1px dotted #667eea', outline: "2px solid #747bff", backgroundColor: '#fff', boxShadow: "inset 0 2px 6px rgba(0, 0, 0, 0.05)"}}
             />
           )}
         />

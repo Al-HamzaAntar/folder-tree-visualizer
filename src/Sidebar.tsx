@@ -3,10 +3,10 @@ import type { FolderNode } from './FolderTree';
 
 interface SidebarProps {
   selectedNode: FolderNode | null;
-  selectedNodePath: string | null;
+  selectedNodePaths: string[];
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ selectedNode, selectedNodePath }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ selectedNode, selectedNodePaths }) => {
   if (!selectedNode) {
     return (
       <aside className="sidebar">
@@ -22,7 +22,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ selectedNode, selectedNodePath
         <strong>Name:</strong> {selectedNode.name}
       </div>
       <div>
-        <strong>Path:</strong> {selectedNodePath}
+        <strong>Paths:</strong> {selectedNodePaths.join(', ')}
       </div>
       <div>
         <strong>Children:</strong> {selectedNode.children ? selectedNode.children.length : 0}

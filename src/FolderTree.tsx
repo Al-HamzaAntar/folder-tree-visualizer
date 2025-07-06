@@ -11,10 +11,11 @@ interface FolderTreeProps {
   tree: FolderNode;
   collapsed: Record<string, boolean>;
   setCollapsed: (updater: (prev: Record<string, boolean>) => Record<string, boolean>) => void;
-  selectedNodePath: string | null;
-  setSelectedNodePath: (p: string) => void;
+  selectedNodePaths: string[];
+  setSelectedNodePaths: React.Dispatch<React.SetStateAction<string[]>>;
   search: string;
   onNodeMove: (sourcePath: string, targetPath: string) => void;
+  onRenameNode: (path: string, newName: string) => void;
 }
 
 function cloneWithCollapse(node: FolderNode, collapsed: Record<string, boolean>, path: string[] = []): FolderNode {
@@ -32,21 +33,29 @@ export const FolderTree: React.FC<FolderTreeProps> = ({
   tree,
   collapsed,
   setCollapsed,
-  selectedNodePath,
-  setSelectedNodePath,
+  selectedNodePaths,
+  setSelectedNodePaths,
   search,
-  onNodeMove
+  onNodeMove,
+  onRenameNode
 }) => {
   const svgRef = useRef<SVGSVGElement | null>(null);
   const gRef = useRef<SVGGElement | null>(null);
   const [tooltip, setTooltip] = useState<{ x: number; y: number; content: string } | null>(null);
   const [zoomTransform, setZoomTransform] = useState<d3.ZoomTransform | null>(null);
+  const [editingNodePath, setEditingNodePath] = useState<string | null>(null);
+  const [editingValue, setEditingValue] = useState<string>('');
+  const [inputPosition, setInputPosition] = useState<{ x: number; y: number } | null>(null);
 
-  const handleNodeClick = useCallback((d: d3.HierarchyPointNode<FolderNode>) => {
+  const handleNodeClick = useCallback((d: d3.HierarchyPointNode<FolderNode>, event?: MouseEvent) => {
     const path = d.ancestors().reverse().map(n => n.data.name).join('/');
     setCollapsed(prev => ({ ...prev, [path]: !prev[path] }));
-    setSelectedNodePath(path);
-  }, [setCollapsed, setSelectedNodePath]);
+    if (event && (event.ctrlKey || event.metaKey)) {
+      setSelectedNodePaths((prev: string[]) => prev.includes(path) ? prev.filter((p: string) => p !== path) : [...prev, path]);
+    } else {
+      setSelectedNodePaths([path]);
+    }
+  }, [setCollapsed, setSelectedNodePaths]);
 
   const handleNodeMouseOver = (event: MouseEvent, d: d3.HierarchyPointNode<FolderNode>) => {
     if (!svgRef.current) return;
@@ -58,6 +67,35 @@ export const FolderTree: React.FC<FolderTreeProps> = ({
     });
   };
   const handleNodeMouseOut = () => setTooltip(null);
+
+  // Helper to get node path
+  const getNodePath = (d: d3.HierarchyPointNode<FolderNode>) => d.ancestors().reverse().map(n => n.data.name).join('/');
+
+  // Double-click handler for renaming
+  const handleNodeDoubleClick = (event: any, d: d3.HierarchyPointNode<FolderNode>) => {
+    event.stopPropagation();
+    const path = getNodePath(d);
+    setEditingNodePath(path);
+    setEditingValue(d.data.name);
+    // Get SVG position for input overlay
+    if (svgRef.current) {
+      const svgRect = svgRef.current.getBoundingClientRect();
+      const pt = svgRef.current.createSVGPoint();
+      pt.x = event.clientX - svgRect.left;
+      pt.y = event.clientY - svgRect.top;
+      setInputPosition({ x: pt.x, y: pt.y });
+    }
+  };
+
+  // Handle input submit (Enter or blur)
+  const handleInputSubmit = () => {
+    if (editingNodePath && editingValue.trim()) {
+      onRenameNode(editingNodePath, editingValue.trim());
+    }
+    setEditingNodePath(null);
+    setEditingValue('');
+    setInputPosition(null);
+  };
 
   useEffect(() => {
     if (!tree || !svgRef.current || !gRef.current) return;
@@ -101,10 +139,11 @@ export const FolderTree: React.FC<FolderTreeProps> = ({
       .style('cursor', 'pointer')
       .on('click', (event, d) => {
         event.stopPropagation();
-        handleNodeClick(d);
+        handleNodeClick(d, event);
       })
       .on('mouseover', (event, d) => handleNodeMouseOver(event, d))
-      .on('mouseout', handleNodeMouseOut);
+      .on('mouseout', handleNodeMouseOut)
+      .on('dblclick', handleNodeDoubleClick);
     let dragSource: d3.HierarchyPointNode<FolderNode> | null = null;
     let dragTarget: d3.HierarchyPointNode<FolderNode> | null = null;
     const drag = d3.drag<SVGGElement, d3.HierarchyPointNode<FolderNode>>()
@@ -142,17 +181,17 @@ export const FolderTree: React.FC<FolderTreeProps> = ({
       .attr('r', 16)
       .attr('fill', d => {
         const path = d.ancestors().reverse().map(n => n.data.name).join('/');
-        if (selectedNodePath && path === selectedNodePath) return '#f59e42';
+        if (selectedNodePaths.includes(path)) return '#f59e42';
         if (search && d.data.name.toLowerCase().includes(search.toLowerCase())) return '#22d3ee';
         return '#6366f1';
       })
       .attr('stroke', d => {
         const path = d.ancestors().reverse().map(n => n.data.name).join('/');
-        return selectedNodePath && path === selectedNodePath ? '#ea580c' : 'none';
+        return selectedNodePaths.includes(path) ? '#ea580c' : 'none';
       })
       .attr('stroke-width', d => {
         const path = d.ancestors().reverse().map(n => n.data.name).join('/');
-        return selectedNodePath && path === selectedNodePath ? 4 : 0;
+        return selectedNodePaths.includes(path) ? 4 : 0;
       });
     node.append('text')
       .text(d => d.data.name)
@@ -167,13 +206,42 @@ export const FolderTree: React.FC<FolderTreeProps> = ({
         setZoomTransform(event.transform);
       });
     svg.call(zoom as d3.ZoomBehavior<SVGSVGElement, unknown>);
-  }, [tree, collapsed, zoomTransform, selectedNodePath, search, setCollapsed, handleNodeClick, onNodeMove]);
+  }, [tree, collapsed, zoomTransform, selectedNodePaths, search, setCollapsed, handleNodeClick, onNodeMove]);
 
   return (
     <div style={{ position: 'relative', width: '100%' }}>
       <svg ref={svgRef} style={{ width: '100%', minHeight: 300 }}>
         <g ref={gRef}></g>
       </svg>
+      {editingNodePath && inputPosition && (
+        <input
+          type="text"
+          value={editingValue}
+          autoFocus
+          style={{
+            position: 'absolute',
+            left: inputPosition.x,
+            top: inputPosition.y,
+            zIndex: 2000,
+            fontSize: 15,
+            padding: '2px 6px',
+            borderRadius: 4,
+            border: '1px solid #888',
+            background: '#fff',
+            minWidth: 60
+          }}
+          onChange={e => setEditingValue(e.target.value)}
+          onBlur={handleInputSubmit}
+          onKeyDown={e => {
+            if (e.key === 'Enter') handleInputSubmit();
+            if (e.key === 'Escape') {
+              setEditingNodePath(null);
+              setEditingValue('');
+              setInputPosition(null);
+            }
+          }}
+        />
+      )}
       {tooltip && (
         <div
           style={{

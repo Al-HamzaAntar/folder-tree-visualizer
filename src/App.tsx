@@ -32,7 +32,13 @@ function parsePathInput(path: string): FolderNode {
 function App() {
   const [parsedTree, setParsedTree] = useState<FolderNode | null>(null);
   const [search, setSearch] = useState(() => localStorage.getItem('search') || '');
-  const [selectedNodePath, setSelectedNodePath] = useState<string | null>(() => localStorage.getItem('selectedNodePath'));
+  const [selectedNodePaths, setSelectedNodePaths] = useState<string[]>(() => {
+    try {
+      return JSON.parse(localStorage.getItem('selectedNodePaths') || '[]');
+    } catch {
+      return [];
+    }
+  });
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>(() => {
     try {
       return JSON.parse(localStorage.getItem('collapsed') || '{}');
@@ -68,8 +74,8 @@ function App() {
     localStorage.setItem('search', search);
   }, [search]);
   useEffect(() => {
-    localStorage.setItem('selectedNodePath', selectedNodePath || '');
-  }, [selectedNodePath]);
+    localStorage.setItem('selectedNodePaths', JSON.stringify(selectedNodePaths));
+  }, [selectedNodePaths]);
   useEffect(() => {
     localStorage.setItem('collapsed', JSON.stringify(collapsed));
   }, [collapsed]);
@@ -88,7 +94,7 @@ function App() {
       tree = parsePathInput(data.pathInput || '');
     }
     setParsedTree(tree);
-    setSelectedNodePath(null);
+    setSelectedNodePaths([]);
   };
 
   // Search helpers
@@ -121,15 +127,15 @@ function App() {
     }
     return null;
   }
-  if (parsedTree && selectedNodePath) {
-    selectedNode = findNodeByPath(parsedTree, selectedNodePath.split('/'));
+  if (parsedTree && selectedNodePaths.length > 0) {
+    selectedNode = findNodeByPath(parsedTree, selectedNodePaths[0].split('/'));
   }
 
   // Handle search
   useEffect(() => {
     if (search && parsedTree) {
       const foundPath = findNodeByName(parsedTree, search);
-      if (foundPath) setSelectedNodePath(foundPath);
+      if (foundPath) setSelectedNodePaths([foundPath]);
     }
   }, [search, parsedTree, findNodeByName]);
 
@@ -190,7 +196,33 @@ function App() {
     if (!removed) return;
     const newTree = insertNodeAtPath(treeWithoutSource, targetPath, removed);
     setParsedTree(newTree);
-    setSelectedNodePath(null);
+    setSelectedNodePaths([]);
+  }
+
+  function renameNodeByPath(node: FolderNode, path: string[], newName: string): FolderNode {
+    if (path.length === 0) return { ...node, name: newName };
+    if (node.name === path[0]) {
+      if (path.length === 1) {
+        return { ...node, name: newName };
+      }
+      if (node.children) {
+        return {
+          ...node,
+          children: node.children.map(child =>
+            child.name === path[1]
+              ? renameNodeByPath(child, path.slice(1), newName)
+              : child
+          )
+        };
+      }
+    }
+    return node;
+  }
+
+  function handleRenameNode(pathStr: string, newName: string) {
+    if (!parsedTree) return;
+    const path = pathStr.split('/');
+    setParsedTree(renameNodeByPath(parsedTree, path, newName));
   }
 
   return (
@@ -217,15 +249,16 @@ function App() {
               tree={parsedTree}
               collapsed={collapsed}
               setCollapsed={handleSetCollapsed}
-              selectedNodePath={selectedNodePath}
-              setSelectedNodePath={setSelectedNodePath}
+              selectedNodePaths={selectedNodePaths}
+              setSelectedNodePaths={setSelectedNodePaths}
               search={search}
               onNodeMove={moveNodeInTree}
+              onRenameNode={handleRenameNode}
             />
           </div>
         )}
       </div>
-      <Sidebar selectedNode={selectedNode} selectedNodePath={selectedNodePath} />
+      <Sidebar selectedNode={selectedNode} selectedNodePaths={selectedNodePaths} />
     </div>
   );
 }

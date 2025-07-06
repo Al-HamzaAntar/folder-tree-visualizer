@@ -1,3 +1,6 @@
+/* ——————————————————————————————————————————— */
+/* Global & Container Styles */
+/* ——————————————————————————————————————————— */
 body {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   min-height: 100vh;
@@ -36,6 +39,9 @@ h1 {
   text-align: center;
 }
 
+/* ——————————————————————————————————————————— */
+/* Form & Inputs */
+/* ——————————————————————————————————————————— */
 .input-form {
   display: flex;
   flex-direction: column;
@@ -47,8 +53,6 @@ h1 {
 .input-form label {
   font-weight: 600;
   color: #374151;
-  margin-bottom: 0.5rem;
-  display: block;
   width: 100%;
   text-align: left;
   font-size: 0.95rem;
@@ -56,20 +60,21 @@ h1 {
   letter-spacing: 0.5px;
 }
 
+/* Text & Path inputs */
 .input-form input[type="text"],
 .input-form textarea {
   width: 100%;
   max-width: 400px;
   padding: 1rem 1.2rem;
-  border: 2px solid #e5e7eb;
+  border: 2px dotted #e5e7eb;
   border-radius: 12px;
   font-size: 1rem;
   background: rgba(255, 255, 255, 0.8);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   margin-top: 0.5rem;
   box-sizing: border-box;
-  display: block;
   font-family: inherit;
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .input-form input[type="text"]:focus,
@@ -81,12 +86,47 @@ h1 {
   transform: translateY(-1px);
 }
 
+/* Modern Select Dropdown */
+.input-form select {
+  width: 100%;
+  max-width: 400px;
+  padding: 1rem 1.2rem;
+  border: 2px dotted #e5e7eb;
+  border-radius: 12px;
+  font-size: 1rem;
+  background: rgba(255, 255, 255, 0.85);
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  cursor: pointer;
+  font-family: inherit;
+  background-image: url("data:image/svg+xml;charset=US-ASCII,%3csvg width='12' height='8' viewBox='0 0 12 8' xmlns='http://www.w3.org/2000/svg'%3e%3cpolyline points='1,1 6,6 11,1' stroke='%23667eea' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 1rem center;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.input-form select:hover,
+.input-form select:focus {
+  border-color: #667eea;
+  box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+  background: rgba(255, 255, 255, 0.95);
+  transform: translateY(-1px);
+  outline: none;
+}
+
+.input-form select option {
+  color: #374151;
+}
+
+/* Radio buttons */
 .input-form input[type="radio"] {
   margin-right: 0.5em;
   accent-color: #667eea;
   transform: scale(1.2);
 }
 
+/* Submit button */
 .input-form button[type="submit"] {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: #fff;
@@ -100,7 +140,6 @@ h1 {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   width: 100%;
   max-width: 400px;
-  font-family: inherit;
   text-transform: uppercase;
   letter-spacing: 1px;
 }
@@ -114,6 +153,9 @@ h1 {
   transform: translateY(0);
 }
 
+/* ——————————————————————————————————————————— */
+/* Search Bar */
+/* ——————————————————————————————————————————— */
 .search-bar {
   margin-top: 2rem;
   width: 100%;
@@ -142,6 +184,9 @@ h1 {
   transform: translateY(-1px);
 }
 
+/* ——————————————————————————————————————————— */
+/* Error Messages */
+/* ——————————————————————————————————————————— */
 .error {
   color: #ef4444;
   font-size: 0.9rem;
@@ -151,7 +196,11 @@ h1 {
   font-weight: 500;
 }
 
-.submitted-data, .parsed-tree {
+/* ——————————————————————————————————————————— */
+/* Output Containers */
+/* ——————————————————————————————————————————— */
+.submitted-data,
+.parsed-tree {
   background: rgba(241, 245, 249, 0.8);
   border-radius: 16px;
   padding: 1.5rem;
@@ -164,6 +213,9 @@ h1 {
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
+/* ——————————————————————————————————————————— */
+/* D3 Tree Container */
+/* ——————————————————————————————————————————— */
 .d3-tree-container {
   display: flex;
   justify-content: center;
@@ -182,6 +234,9 @@ h1 {
   margin: 0 auto;
 }
 
+/* ——————————————————————————————————————————— */
+/* Sidebar */
+/* ——————————————————————————————————————————— */
 .sidebar {
   min-width: 280px;
   max-width: 340px;
@@ -234,28 +289,27 @@ h1 {
   border: 1px dashed #d1d5db;
 }
 
+/* ——————————————————————————————————————————— */
+/* Responsive Breakpoints */
+/* ——————————————————————————————————————————— */
 @media (max-width: 900px) {
   body {
     padding: 10px;
   }
-  
   .app-container {
     min-width: 90vw;
     max-width: 98vw;
     padding: 1.5rem;
   }
-  
   .sidebar {
     min-width: 90vw;
     max-width: 98vw;
     margin-top: 1.5rem;
     padding: 1.5rem;
   }
-  
   .d3-tree-container {
     padding: 1rem 0.5rem;
   }
-  
   h1 {
     font-size: 2rem;
   }
@@ -266,17 +320,14 @@ h1 {
     min-width: 95vw;
     padding: 1rem;
   }
-  
   h1 {
     font-size: 1.8rem;
   }
-  
   .input-form input[type="text"],
   .input-form textarea,
   .search-bar input[type="text"] {
     padding: 0.8rem 1rem;
   }
-  
   .input-form button[type="submit"] {
     padding: 0.8rem 1.5rem;
   }

@@ -1,8 +1,10 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
-import { useForm, Controller } from 'react-hook-form'
+import { useState, useEffect, useCallback } from 'react'
+import { useForm } from 'react-hook-form'
 import './App.css'
-import * as d3 from 'd3'
-import type { MouseEvent } from 'react'
+import { FolderTree } from './FolderTree'
+import { Sidebar } from './Sidebar'
+import { InputForm } from './InputForm'
+import type { FolderNode } from './FolderTree'
 
 // Types for form data
 interface FormData {
@@ -11,21 +13,12 @@ interface FormData {
   pathInput?: string;
 }
 
-// Type for folder tree node
-interface FolderNode {
-  name: string;
-  children?: FolderNode[];
-  // Optionally, add more fields as needed
-}
-
 // Utility: Parse folder path string into FolderNode
 function parsePathInput(path: string): FolderNode {
-  // Split by backslash or forward slash
   const segments = path.split(/\\|\//).filter(Boolean);
   if (segments.length === 0) {
     return { name: '', children: [] };
   }
-  // Build nested structure
   const node: FolderNode = { name: segments[0], children: [] };
   let current = node;
   for (let i = 1; i < segments.length; i++) {
@@ -34,174 +27,6 @@ function parsePathInput(path: string): FolderNode {
     current = child;
   }
   return node;
-}
-
-// Helper: Recursively clone and collapse/expand nodes
-function cloneWithCollapse(node: FolderNode, collapsed: Record<string, boolean>, path: string[] = []): FolderNode {
-  const nodePath = [...path, node.name].join('/');
-  if (collapsed[nodePath] && node.children && node.children.length > 0) {
-    return { ...node, children: undefined };
-  }
-  return {
-    ...node,
-    children: node.children?.map(child => cloneWithCollapse(child, collapsed, [...path, node.name]))
-  };
-}
-
-// D3 Tree Visualization Component with zoom, pan, tooltips, expand/collapse
-function FolderTreeD3({ tree, collapsed, setCollapsed, selectedNodePath, setSelectedNodePath, search }: {
-  tree: FolderNode,
-  collapsed: Record<string, boolean>,
-  setCollapsed: (updater: (prev: Record<string, boolean>) => Record<string, boolean>) => void,
-  selectedNodePath: string | null,
-  setSelectedNodePath: (p: string) => void,
-  search: string
-}) {
-  const svgRef = useRef<SVGSVGElement | null>(null);
-  const gRef = useRef<SVGGElement | null>(null);
-  const [tooltip, setTooltip] = useState<{ x: number; y: number; content: string } | null>(null);
-  const [zoomTransform, setZoomTransform] = useState<d3.ZoomTransform | null>(null);
-
-  // Collapse/expand handler
-  const handleNodeClick = useCallback((d: d3.HierarchyPointNode<FolderNode>) => {
-    const path = d.ancestors().reverse().map(n => n.data.name).join('/');
-    setCollapsed(prev => ({ ...prev, [path]: !prev[path] }));
-    setSelectedNodePath(path);
-  }, [setCollapsed, setSelectedNodePath]);
-
-  // Tooltip handlers
-  const handleNodeMouseOver = (event: MouseEvent, d: d3.HierarchyPointNode<FolderNode>) => {
-    const path = d.ancestors().reverse().map(n => n.data.name).join('/');
-    setTooltip({
-      x: event.clientX,
-      y: event.clientY,
-      content: `Name: ${d.data.name}\nPath: ${path}`
-    });
-  };
-  const handleNodeMouseOut = () => setTooltip(null);
-
-  useEffect(() => {
-    if (!tree || !svgRef.current || !gRef.current) return;
-    d3.select(gRef.current).selectAll('*').remove();
-
-    // Apply collapse state
-    const collapsedTree = cloneWithCollapse(tree, collapsed);
-    const root = d3.hierarchy(collapsedTree, d => d.children) as d3.HierarchyPointNode<FolderNode>;
-    const treeLayout = d3.tree<FolderNode>().nodeSize([40, 160]);
-    treeLayout(root);
-
-    // Calculate SVG size based on tree
-    const width = 600;
-    const height = Math.max(300, root.height * 60 + 60);
-
-    // Calculate horizontal center offset
-    const nodes = root.descendants() as d3.HierarchyPointNode<FolderNode>[];
-    const minX = Math.min(...nodes.map(n => n.x));
-    const maxX = Math.max(...nodes.map(n => n.x));
-    const treeHeight = maxX - minX;
-    const centerY = width / 2;
-    const centerX = (height - treeHeight) / 2 - minX;
-
-    // Set up zoom
-    const svg = d3.select(svgRef.current)
-      .attr('width', '100%')
-      .attr('height', height)
-      .attr('viewBox', `0 0 ${width} ${height}`)
-      .style('background', '#f8fafc')
-      .style('border-radius', '12px');
-
-    const g = d3.select(gRef.current)
-      .attr('transform', zoomTransform ? zoomTransform.toString() : `translate(${centerY},${centerX})`);
-
-    // Draw links
-    g.append('g')
-      .selectAll('path')
-      .data(root.links() as d3.HierarchyPointLink<FolderNode>[])
-      .join('path')
-      .attr('d', d3.linkHorizontal<d3.HierarchyPointLink<FolderNode>, d3.HierarchyPointNode<FolderNode>>()
-        .x(d => d.y - width / 2)
-        .y(d => d.x - minX)
-      )
-      .attr('fill', 'none')
-      .attr('stroke', '#94a3b8')
-      .attr('stroke-width', 2);
-
-    // Draw nodes
-    const node = g.append('g')
-      .selectAll<SVGGElement, d3.HierarchyPointNode<FolderNode>>('g')
-      .data(nodes)
-      .join('g')
-      .attr('transform', d => `translate(${d.y - width / 2},${d.x - minX})`)
-      .style('cursor', 'pointer')
-      .on('click', (event, d) => {
-        event.stopPropagation();
-        handleNodeClick(d);
-      })
-      .on('mouseover', (event, d) => handleNodeMouseOver(event, d))
-      .on('mouseout', handleNodeMouseOut);
-
-    node.append('circle')
-      .attr('r', 16)
-      .attr('fill', d => {
-        const path = d.ancestors().reverse().map(n => n.data.name).join('/');
-        if (selectedNodePath && path === selectedNodePath) return '#f59e42';
-        if (search && d.data.name.toLowerCase().includes(search.toLowerCase())) return '#22d3ee';
-        return '#6366f1';
-      })
-      .attr('stroke', d => {
-        const path = d.ancestors().reverse().map(n => n.data.name).join('/');
-        return selectedNodePath && path === selectedNodePath ? '#ea580c' : 'none';
-      })
-      .attr('stroke-width', d => {
-        const path = d.ancestors().reverse().map(n => n.data.name).join('/');
-        return selectedNodePath && path === selectedNodePath ? 4 : 0;
-      });
-
-    node.append('text')
-      .text(d => d.data.name)
-      .attr('dy', '0.35em')
-      .attr('x', d => d.children ? -22 : 22)
-      .attr('text-anchor', d => d.children ? 'end' : 'start')
-      .attr('font-size', 15)
-      .attr('fill', '#22223b');
-
-    // D3 zoom behavior
-    const zoom = d3.zoom<SVGSVGElement, unknown>()
-      .scaleExtent([0.3, 2])
-      .on('zoom', (event) => {
-        setZoomTransform(event.transform);
-      });
-    svg.call(zoom as d3.ZoomBehavior<SVGSVGElement, unknown>);
-  }, [tree, collapsed, zoomTransform, selectedNodePath, search, setCollapsed, handleNodeClick]);
-
-  // Tooltip rendering
-  return (
-    <div style={{ position: 'relative', width: '100%' }}>
-      <svg ref={svgRef} style={{ width: '100%', minHeight: 300 }}>
-        <g ref={gRef}></g>
-      </svg>
-      {tooltip && (
-        <div
-          style={{
-            position: 'fixed',
-            left: tooltip.x + 12,
-            top: tooltip.y + 12,
-            background: 'rgba(30,41,59,0.97)',
-            color: '#fff',
-            padding: '8px 14px',
-            borderRadius: 8,
-            fontSize: 14,
-            pointerEvents: 'none',
-            zIndex: 1000,
-            whiteSpace: 'pre-line',
-            boxShadow: '0 2px 8px 0 rgba(30,41,59,0.18)'
-          }}
-        >
-          {tooltip.content}
-        </div>
-      )}
-    </div>
-  );
 }
 
 function App() {
@@ -230,12 +55,29 @@ function App() {
   const watchedPathInput = watch('pathInput');
 
   // Persist form data in localStorage
-  useEffect(() => { localStorage.setItem('inputType', watchedInputType); }, [watchedInputType]);
-  useEffect(() => { localStorage.setItem('jsonInput', watchedJsonInput || ''); }, [watchedJsonInput]);
-  useEffect(() => { localStorage.setItem('pathInput', watchedPathInput || ''); }, [watchedPathInput]);
-  useEffect(() => { localStorage.setItem('search', search); }, [search]);
-  useEffect(() => { localStorage.setItem('selectedNodePath', selectedNodePath || ''); }, [selectedNodePath]);
-  useEffect(() => { localStorage.setItem('collapsed', JSON.stringify(collapsed)); }, [collapsed]);
+  useEffect(() => {
+    localStorage.setItem('inputType', watchedInputType);
+  }, [watchedInputType]);
+  useEffect(() => {
+    localStorage.setItem('jsonInput', watchedJsonInput || '');
+  }, [watchedJsonInput]);
+  useEffect(() => {
+    localStorage.setItem('pathInput', watchedPathInput || '');
+  }, [watchedPathInput]);
+  useEffect(() => {
+    localStorage.setItem('search', search);
+  }, [search]);
+  useEffect(() => {
+    localStorage.setItem('selectedNodePath', selectedNodePath || '');
+  }, [selectedNodePath]);
+  useEffect(() => {
+    localStorage.setItem('collapsed', JSON.stringify(collapsed));
+  }, [collapsed]);
+  useEffect(() => {
+    if (parsedTree) {
+      localStorage.setItem('jsonInput', JSON.stringify(parsedTree, null, 2));
+    }
+  }, [parsedTree]);
 
   // Parse input on submit
   const onSubmit = (data: FormData) => {
@@ -296,74 +138,71 @@ function App() {
     setCollapsed(updater);
   };
 
-  // Pass handleSetCollapsed to FolderTreeD3
+  // --- Drag-and-drop move logic ---
+  function removeNodeByPath(node: FolderNode, path: string[]): { removed: FolderNode | null, tree: FolderNode } {
+    if (path.length === 0) return { removed: null, tree: node };
+    if (path.length === 1) {
+      if (!node.children) return { removed: null, tree: node };
+      const idx = node.children.findIndex(child => child.name === path[0]);
+      if (idx === -1) return { removed: null, tree: node };
+      const removed = node.children[idx];
+      const newChildren = [...node.children.slice(0, idx), ...node.children.slice(idx + 1)];
+      return { removed, tree: { ...node, children: newChildren } };
+    }
+    if (!node.children) return { removed: null, tree: node };
+    const idx = node.children.findIndex(child => child.name === path[0]);
+    if (idx === -1) return { removed: null, tree: node };
+    const { removed, tree: newChild } = removeNodeByPath(node.children[idx], path.slice(1));
+    const newChildren = [...node.children];
+    newChildren[idx] = newChild;
+    return { removed, tree: { ...node, children: newChildren } };
+  }
+
+  function insertNodeAtPath(node: FolderNode, path: string[], toInsert: FolderNode): FolderNode {
+    if (path.length === 0) {
+      return { ...node, children: [...(node.children || []), toInsert] };
+    }
+    if (!node.children) return node;
+    const idx = node.children.findIndex(child => child.name === path[0]);
+    if (idx === -1) return node;
+    const newChildren = [...node.children];
+    newChildren[idx] = insertNodeAtPath(node.children[idx], path.slice(1), toInsert);
+    return { ...node, children: newChildren };
+  }
+
+  function isDescendant(sourcePath: string[], targetPath: string[]): boolean {
+    if (targetPath.length < sourcePath.length) return false;
+    for (let i = 0; i < sourcePath.length; i++) {
+      if (sourcePath[i] !== targetPath[i]) return false;
+    }
+    return targetPath.length > sourcePath.length;
+  }
+
+  function moveNodeInTree(sourcePathStr: string, targetPathStr: string) {
+    if (!parsedTree) return;
+    const sourcePath = sourcePathStr.split('/');
+    const targetPath = targetPathStr.split('/');
+    if (sourcePathStr === targetPathStr || isDescendant(sourcePath, targetPath)) {
+      alert('Invalid move: cannot move a node into itself or its descendant.');
+      return;
+    }
+    const { removed, tree: treeWithoutSource } = removeNodeByPath(parsedTree, sourcePath);
+    if (!removed) return;
+    const newTree = insertNodeAtPath(treeWithoutSource, targetPath, removed);
+    setParsedTree(newTree);
+    setSelectedNodePath(null);
+  }
+
   return (
     <div style={{ display: 'flex', gap: 32, alignItems: 'flex-start', justifyContent: 'center' }}>
       <div className="app-container">
         <h1>Folder Tree Visualizer</h1>
-        <form onSubmit={handleSubmit(onSubmit)} className="input-form">
-          <div>
-            <label>
-              <Controller
-                name="inputType"
-                control={control}
-                render={({ field }) => (
-                  <>
-                    <input
-                      type="radio"
-                      value="json"
-                      checked={field.value === 'json'}
-                      onChange={() => field.onChange('json')}
-                    /> JSON Input
-                    <input
-                      type="radio"
-                      value="path"
-                      checked={field.value === 'path'}
-                      onChange={() => field.onChange('path')}
-                      style={{ marginLeft: 16 }}
-                    /> Folder Path Input
-                  </>
-                )}
-              />
-            </label>
-          </div>
-          {watchedInputType === 'json' && (
-            <div>
-              <label>JSON Input:</label>
-              <Controller
-                name="jsonInput"
-                control={control}
-                rules={{ required: watchedInputType === 'json' }}
-                render={({ field }) => (
-                  <textarea
-                    {...field}
-                    rows={6}
-                    cols={40}
-                    required
-                  />
-                )}
-              />
-            </div>
-          )}
-          {watchedInputType === 'path' && (
-            <div>
-              <label>Folder Path Input:</label>
-              <Controller
-                name="pathInput"
-                control={control}
-                rules={{ required: watchedInputType === 'path' }}
-                render={({ field }) => (
-                  <input
-                    {...field}
-                    type="text"
-                    required
-                  />
-                )}
-              />
-            </div>
-          )}
-          <button type="submit">Submit</button>
-        </form>
+        <InputForm
+          control={control}
+          handleSubmit={handleSubmit}
+          onSubmit={onSubmit}
+          watchedInputType={watchedInputType}
+        />
         <div className="search-bar">
           <input
             type="text"
@@ -374,34 +213,21 @@ function App() {
         </div>
         {parsedTree && (
           <div className="d3-tree-container">
-            <FolderTreeD3
+            <FolderTree
               tree={parsedTree}
               collapsed={collapsed}
               setCollapsed={handleSetCollapsed}
               selectedNodePath={selectedNodePath}
               setSelectedNodePath={setSelectedNodePath}
               search={search}
+              onNodeMove={moveNodeInTree}
             />
           </div>
         )}
       </div>
-      {/* Sidebar */}
-      <div className="sidebar">
-        <h2>Node Details</h2>
-        {selectedNode ? (
-          <>
-            <div><span className="node-detail-label">Name:</span> <span className="node-detail-value">{selectedNode.name}</span></div>
-            <div><span className="node-detail-label">Path:</span> <span className="node-detail-value">{selectedNodePath}</span></div>
-            {selectedNode.children && (
-              <div><span className="node-detail-label">Children:</span> <span className="node-detail-value">{selectedNode.children.length}</span></div>
-            )}
-          </>
-        ) : (
-          <div className="empty">Select a node to see details</div>
-        )}
-      </div>
+      <Sidebar selectedNode={selectedNode} selectedNodePath={selectedNodePath} />
     </div>
   );
 }
 
-export default App
+export default App;

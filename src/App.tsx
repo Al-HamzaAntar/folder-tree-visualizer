@@ -30,7 +30,19 @@ function parsePathInput(path: string): FolderNode {
 }
 
 function App() {
-  const [parsedTree, setParsedTree] = useState<FolderNode | null>(null);
+  // --- Load parsedTree from localStorage if available ---
+  const getInitialTree = () => {
+    const saved = localStorage.getItem('jsonInput');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch {
+        return null;
+      }
+    }
+    return null;
+  };
+  const [parsedTree, setParsedTree] = useState<FolderNode | null>(getInitialTree);
   const [search, setSearch] = useState(() => localStorage.getItem('search') || '');
   const [selectedNodePaths, setSelectedNodePaths] = useState<string[]>(() => {
     try {
@@ -95,6 +107,10 @@ function App() {
     }
     setParsedTree(tree);
     setSelectedNodePaths([]);
+    // Save to localStorage immediately
+    if (tree) {
+      localStorage.setItem('jsonInput', JSON.stringify(tree, null, 2));
+    }
   };
 
   // Search helpers

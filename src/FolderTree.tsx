@@ -46,6 +46,7 @@ export const FolderTree: React.FC<FolderTreeProps> = ({
   const [editingNodePath, setEditingNodePath] = useState<string | null>(null);
   const [editingValue, setEditingValue] = useState<string>('');
   const [inputPosition, setInputPosition] = useState<{ x: number; y: number } | null>(null);
+  const [inputError, setInputError] = useState<string | null>(null);
 
   const handleNodeClick = useCallback((d: d3.HierarchyPointNode<FolderNode>, event?: MouseEvent) => {
     const path = d.ancestors().reverse().map(n => n.data.name).join('/');
@@ -71,8 +72,8 @@ export const FolderTree: React.FC<FolderTreeProps> = ({
   // Helper to get node path
   const getNodePath = (d: d3.HierarchyPointNode<FolderNode>) => d.ancestors().reverse().map(n => n.data.name).join('/');
 
-  // Double-click handler for renaming
-  const handleNodeDoubleClick = (event: any, d: d3.HierarchyPointNode<FolderNode>) => {
+  // Double-click handler for renaming (now only on label)
+  const handleLabelDoubleClick = (event: any, d: d3.HierarchyPointNode<FolderNode>) => {
     event.stopPropagation();
     const path = getNodePath(d);
     setEditingNodePath(path);
@@ -87,15 +88,51 @@ export const FolderTree: React.FC<FolderTreeProps> = ({
     }
   };
 
+  // Right-click context menu for renaming
+  const handleLabelContextMenu = (event: any, d: d3.HierarchyPointNode<FolderNode>) => {
+    event.preventDefault();
+    handleLabelDoubleClick(event, d);
+  };
+
+  // Helper to get sibling names
+  const getSiblingNames = (path: string) => {
+    if (!tree) return [];
+    const parts = path.split('/');
+    if (parts.length < 2) return [];
+    let node = tree;
+    for (let i = 1; i < parts.length - 1; i++) {
+      node = (node.children || []).find(child => child.name === parts[i]) || { name: '', children: [] };
+    }
+    return (node.children || []).map(child => child.name);
+  };
+
   // Handle input submit (Enter or blur)
   const handleInputSubmit = () => {
-    if (editingNodePath && editingValue.trim()) {
-      onRenameNode(editingNodePath, editingValue.trim());
+    if (!editingNodePath) return;
+    const trimmed = editingValue.trim();
+    const siblings = getSiblingNames(editingNodePath).filter(n => n !== (editingNodePath.split('/').pop() || ''));
+    if (!trimmed) {
+      setInputError('Name cannot be empty.');
+      return;
     }
+    if (siblings.includes(trimmed)) {
+      setInputError('Duplicate name in this folder.');
+      return;
+    }
+    onRenameNode(editingNodePath, trimmed);
     setEditingNodePath(null);
     setEditingValue('');
     setInputPosition(null);
+    setInputError(null);
   };
+
+  // Auto-select input text when shown
+  useEffect(() => {
+    if (editingNodePath && inputPosition) {
+      const input = document.getElementById('rename-input') as HTMLInputElement | null;
+      if (input) input.select();
+    }
+  }, [editingNodePath, inputPosition]);
 
   useEffect(() => {
     if (!tree || !svgRef.current || !gRef.current) return;
@@ -143,7 +180,8 @@ export const FolderTree: React.FC<FolderTreeProps> = ({
       })
       .on('mouseover', (event, d) => handleNodeMouseOver(event, d))
       .on('mouseout', handleNodeMouseOut)
-      .on('dblclick', handleNodeDoubleClick);
+      .on('dblclick', handleLabelDoubleClick)
+      .on('contextmenu', handleLabelContextMenu);
     let dragSource: d3.HierarchyPointNode<FolderNode> | null = null;
     let dragTarget: d3.HierarchyPointNode<FolderNode> | null = null;
     const drag = d3.drag<SVGGElement, d3.HierarchyPointNode<FolderNode>>()
@@ -199,7 +237,10 @@ export const FolderTree: React.FC<FolderTreeProps> = ({
       .attr('x', d => d.children ? -22 : 22)
       .attr('text-anchor', d => d.children ? 'end' : 'start')
       .attr('font-size', 15)
-      .attr('fill', '#22223b');
+      .attr('fill', '#22223b')
+      .style('cursor', 'text')
+      .on('dblclick', handleLabelDoubleClick)
+      .on('contextmenu', handleLabelContextMenu);
     const zoom = d3.zoom<SVGSVGElement, unknown>()
       .scaleExtent([0.3, 2])
       .on('zoom', (event) => {
@@ -214,33 +255,37 @@ export const FolderTree: React.FC<FolderTreeProps> = ({
         <g ref={gRef}></g>
       </svg>
       {editingNodePath && inputPosition && (
-        <input
-          type="text"
-          value={editingValue}
-          autoFocus
-          style={{
-            position: 'absolute',
-            left: inputPosition.x,
-            top: inputPosition.y,
-            zIndex: 2000,
-            fontSize: 15,
-            padding: '2px 6px',
-            borderRadius: 4,
-            border: '1px solid #888',
-            background: '#fff',
-            minWidth: 60
-          }}
-          onChange={e => setEditingValue(e.target.value)}
-          onBlur={handleInputSubmit}
-          onKeyDown={e => {
-            if (e.key === 'Enter') handleInputSubmit();
-            if (e.key === 'Escape') {
-              setEditingNodePath(null);
-              setEditingValue('');
-              setInputPosition(null);
-            }
-          }}
-        />
+        <div style={{ position: 'absolute', left: inputPosition.x, top: inputPosition.y, zIndex: 2000 }}>
+          <input
+            id="rename-input"
+            type="text"
+            value={editingValue}
+            autoFocus
+            style={{
+              fontSize: 15,
+              padding: '2px 6px',
+              borderRadius: 4,
+              border: inputError ? '1.5px solid #e11d48' : '1px solid #888',
+              background: '#fff',
+              minWidth: 60,
+              outline: inputError ? '2px solid #e11d48' : undefined
+            }}
+            onChange={e => { setEditingValue(e.target.value); setInputError(null); }}
+            onBlur={handleInputSubmit}
+            onKeyDown={e => {
+              if (e.key === 'Enter') handleInputSubmit();
+              if (e.key === 'Escape') {
+                setEditingNodePath(null);
+                setEditingValue('');
+                setInputPosition(null);
+                setInputError(null);
+              }
+            }}
+          />
+          {inputError && (
+            <div style={{ color: '#e11d48', fontSize: 13, marginTop: 2, background: '#fff0f3', borderRadius: 3, padding: '2px 6px', border: '1px solid #e11d48' }}>{inputError}</div>
+          )}
+        </div>
       )}
       {tooltip && (
         <div

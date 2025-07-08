@@ -30,7 +30,7 @@ function parsePathInput(path: string): FolderNode {
 }
 
 function App() {
-  // --- Load parsedTree from localStorage if available ---
+  // Load parsedTree from localStorage if available 
   const getInitialTree = () => {
     const saved = localStorage.getItem('jsonInput');
     if (saved) {
@@ -241,6 +241,52 @@ function App() {
     setParsedTree(renameNodeByPath(parsedTree, path, newName));
   }
 
+  // --- Batch Actions ---
+  function handleDeleteSelected() {
+    if (!parsedTree || selectedNodePaths.length === 0) return;
+    let newTree = parsedTree;
+    // Remove each selected node
+    selectedNodePaths.forEach(pathStr => {
+      const path = pathStr.split('/');
+      const result = removeNodeByPath(newTree, path);
+      newTree = result.tree;
+    });
+    setParsedTree(newTree);
+    setSelectedNodePaths([]);
+  }
+
+  function handleMoveSelected() {
+    if (!parsedTree || selectedNodePaths.length === 0) return;
+    const targetPath = window.prompt('Enter the target folder path to move selected nodes into:');
+    if (!targetPath) return;
+    let newTree = parsedTree;
+    // Remove all selected nodes first, collect them
+    const removedNodes: FolderNode[] = [];
+    selectedNodePaths.forEach(pathStr => {
+      const path = pathStr.split('/');
+      const result = removeNodeByPath(newTree, path);
+      if (result.removed) removedNodes.push(result.removed);
+      newTree = result.tree;
+    });
+    // Insert all removed nodes into the target
+    const targetPathArr = targetPath.split('/');
+    removedNodes.forEach(node => {
+      newTree = insertNodeAtPath(newTree, targetPathArr, node);
+    });
+    setParsedTree(newTree);
+    setSelectedNodePaths([]);
+  }
+
+  function handleExpandCollapseSelected(expand: boolean) {
+    setCollapsed(prev => {
+      const updated = { ...prev };
+      selectedNodePaths.forEach(path => {
+        updated[path] = !expand;
+      });
+      return updated;
+    });
+  }
+
   return (
     <div style={{ display: 'flex', gap: 32, alignItems: 'flex-start', justifyContent: 'center' }}>
       <div className="app-container">
@@ -274,7 +320,13 @@ function App() {
           </div>
         )}
       </div>
-      <Sidebar selectedNode={selectedNode} selectedNodePaths={selectedNodePaths} />
+      <Sidebar
+        selectedNode={selectedNode}
+        selectedNodePaths={selectedNodePaths}
+        onDeleteSelected={handleDeleteSelected}
+        onMoveSelected={handleMoveSelected}
+        onExpandCollapseSelected={handleExpandCollapseSelected}
+      />
     </div>
   );
 }

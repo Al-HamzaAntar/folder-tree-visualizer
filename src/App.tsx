@@ -72,7 +72,7 @@ function App() {
   const watchedJsonInput = watch('jsonInput');
   const watchedPathInput = watch('pathInput');
 
-  // Persist form data in localStorage
+  // Persist form data in localStoragePersist
   useEffect(() => {
     localStorage.setItem('inputType', watchedInputType);
   }, [watchedInputType]);
@@ -160,7 +160,7 @@ function App() {
     setCollapsed(updater);
   };
 
-  // --- Drag-and-drop move logic ---
+  // Drag-and-drop move logic
   function removeNodeByPath(node: FolderNode, path: string[]): { removed: FolderNode | null, tree: FolderNode } {
     if (path.length === 0) return { removed: null, tree: node };
     if (path.length === 1) {
@@ -204,15 +204,25 @@ function App() {
     if (!parsedTree) return;
     const sourcePath = sourcePathStr.split('/');
     const targetPath = targetPathStr.split('/');
-    if (sourcePathStr === targetPathStr || isDescendant(sourcePath, targetPath)) {
-      alert('Invalid move: cannot move a node into itself or its descendant.');
+    if (sourcePathStr === targetPathStr || isDescendant(sourcePath, targetPath) || isDescendant(targetPath, sourcePath)) {
+      alert('Invalid move: cannot swap a node with itself or its descendant.');
       return;
     }
-    const { removed, tree: treeWithoutSource } = removeNodeByPath(parsedTree, sourcePath);
-    if (!removed) return;
-    const newTree = insertNodeAtPath(treeWithoutSource, targetPath, removed);
+    // Remove both nodes
+    const sourceResult = removeNodeByPath(parsedTree, sourcePath);
+    if (!sourceResult.removed) return;
+    const treeWithoutSource = sourceResult.tree;
+    // Adjust target path if source was before target in the tree
+    const targetResult = removeNodeByPath(treeWithoutSource, targetPath);
+    if (!targetResult.removed) return;
+    let newTree = targetResult.tree;
+    // Insert source at target's original location
+    newTree = insertNodeAtPath(newTree, targetPath, sourceResult.removed);
+    // Insert target at source's original location
+    newTree = insertNodeAtPath(newTree, sourcePath, targetResult.removed);
     setParsedTree(newTree);
     setSelectedNodePaths([]);
+    localStorage.setItem('jsonInput', JSON.stringify(newTree, null, 2));
   }
 
   function renameNodeByPath(node: FolderNode, path: string[], newName: string): FolderNode {
@@ -245,8 +255,9 @@ function App() {
   function handleDeleteSelected() {
     if (!parsedTree || selectedNodePaths.length === 0) return;
     let newTree = parsedTree;
-    // Remove each selected node
-    selectedNodePaths.forEach(pathStr => {
+    // Sort paths by depth descending (children before parents)
+    const sortedPaths = [...selectedNodePaths].sort((a, b) => b.split('/').length - a.split('/').length);
+    sortedPaths.forEach(pathStr => {
       const path = pathStr.split('/');
       const result = removeNodeByPath(newTree, path);
       newTree = result.tree;
@@ -259,17 +270,29 @@ function App() {
     if (!parsedTree || selectedNodePaths.length === 0) return;
     const targetPath = window.prompt('Enter the target folder path to move selected nodes into:');
     if (!targetPath) return;
+    // Check if target path exists
+    const targetPathArr = targetPath.split('/');
+    const targetNode = findNodeByPath(parsedTree, targetPathArr);
+    if (!targetNode) {
+      alert('Target path does not exist!');
+      return;
+    }
     let newTree = parsedTree;
-    // Remove all selected nodes first, collect them
+    // Sort paths by depth descending (children before parents)
+    const sortedPaths = [...selectedNodePaths].sort((a, b) => b.split('/').length - a.split('/').length);
+    // Only move top-level selected nodes (not descendants of other selected nodes)
+    const isDescendantOfAny = (path: string, others: string[]) =>
+      others.some(other => path !== other && path.startsWith(other + '/'));
+    const topLevelPaths = sortedPaths.filter(path => !isDescendantOfAny(path, sortedPaths));
+    // Remove all top-level selected nodes first, collect them
     const removedNodes: FolderNode[] = [];
-    selectedNodePaths.forEach(pathStr => {
+    topLevelPaths.forEach(pathStr => {
       const path = pathStr.split('/');
       const result = removeNodeByPath(newTree, path);
       if (result.removed) removedNodes.push(result.removed);
       newTree = result.tree;
     });
     // Insert all removed nodes into the target
-    const targetPathArr = targetPath.split('/');
     removedNodes.forEach(node => {
       newTree = insertNodeAtPath(newTree, targetPathArr, node);
     });
